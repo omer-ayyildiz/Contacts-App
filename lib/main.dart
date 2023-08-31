@@ -39,10 +39,15 @@ class _MyHomePageState extends State<MyHomePage> {
   final db = FirebaseFirestore.instance;
   List<String> itemList = [];
   String location = '[ALL]';
+
+  List<String> catList = [];
+  String category = '[ALL]';
+
   @override
   void initState() {
     super.initState();
     fetchData();
+    fetchCategories();
   }
 
   Future<void> fetchData() async {
@@ -58,6 +63,22 @@ class _MyHomePageState extends State<MyHomePage> {
     });
     setState(() {
       itemList = tempItemList;
+    });
+  }
+
+  Future<void> fetchCategories() async {
+    final CollectionReference itemRef =
+        FirebaseFirestore.instance.collection('contacts');
+    QuerySnapshot querySnapshot = await itemRef.get();
+    List<String> tempItemList = [];
+    tempItemList.add('[ALL]');
+    querySnapshot.docs.forEach((element) {
+      if (!tempItemList.contains(element['category'].toString())) {
+        tempItemList.add(element['category'].toString());
+      }
+    });
+    setState(() {
+      catList = tempItemList;
     });
   }
 
@@ -93,6 +114,16 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
+  Widget chips2() {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 4,
+      children: catList.map((String e) {
+        return myChip(e);
+      }).toList(),
+    );
+  }
+
   Widget chips() {
     return FutureBuilder(
       future: Firebase.initializeApp(),
@@ -117,7 +148,9 @@ class _MyHomePageState extends State<MyHomePage> {
                   var data = snapshot.data!.docs;
                   return Wrap(
                     children: [
-                      myChip(data[index]['category'], Colors.grey),
+                      myChip(
+                        data[index]['category'],
+                      ),
                     ],
                   );
                 },
@@ -135,11 +168,22 @@ class _MyHomePageState extends State<MyHomePage> {
       builder: (context, snapshot) {
         return StreamBuilder<QuerySnapshot>(
           stream: location == '[ALL]'
-              ? db.collection('contacts').snapshots()
-              : db
-                  .collection('contacts')
-                  .where('location', isEqualTo: location)
-                  .snapshots(),
+              ? category == '[ALL]'
+                  ? db.collection('contacts').snapshots()
+                  : db
+                      .collection('contacts')
+                      .where('category', isEqualTo: category)
+                      .snapshots()
+              : category == '[ALL]'
+                  ? db
+                      .collection('contacts')
+                      .where('location', isEqualTo: location)
+                      .snapshots()
+                  : db
+                      .collection('contacts')
+                      .where('location', isEqualTo: location)
+                      .where('category', isEqualTo: category)
+                      .snapshots(),
           builder: (context, snapshot) {
             if (!snapshot.hasData) {
               return const Center(
@@ -362,47 +406,20 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  Widget myChip(String label, Color color) {
-    Color color = Colors.amber;
-    var rnd = Random();
-    int i = rnd.nextInt(6);
-    switch (i) {
-      case 1:
-        color = Colors.deepOrange;
-
-        break;
-      case 2:
-        color = Colors.purple;
-
-        break;
-      case 3:
-        color = Colors.orangeAccent;
-
-        break;
-      case 4:
-        color = Colors.greenAccent;
-
-        break;
-      case 5:
-        color = Colors.blue;
-
-        break;
-      case 6:
-        color = Colors.yellow;
-
-        break;
-      default:
-    }
-
+  Widget myChip(String label) {
     return GestureDetector(
-      onTap: () {},
+      onTap: () {
+        setState(() {
+          category = label;
+        });
+      },
       child: Chip(
         label: Text(
           label,
           style: const TextStyle(fontSize: 12),
         ),
         labelPadding: const EdgeInsets.only(left: 8, right: 8),
-        backgroundColor: color,
+        backgroundColor: category == label ? Colors.green : Colors.grey,
         elevation: 6,
         shadowColor: Colors.grey[60],
         padding: const EdgeInsets.all(8),
